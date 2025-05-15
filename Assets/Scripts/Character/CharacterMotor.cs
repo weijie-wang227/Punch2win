@@ -19,23 +19,21 @@ public class CharacterMotor : MonoBehaviour
     [SerializeField] private float moveDelay = 0.2f;
     private CharacterAnimator animator;
     private CharacterController characterController;
-    private bool isMoving = false;
-    private bool isPunching = false;
-    public bool isPunchOut = false;
-    public bool isHit = false;
     private float hitDelay = 0.5f;
     private float hitTimer = 0f;
     public string punchType;
     [SerializeField] private bool isDown = false;
-    private bool roundOver = false;
+    public bool isHurt = false;
     [SerializeField] private List<Collider> walls;
     [SerializeField] private Transform wallDetect;
     private float maxHealth;
     private bool inClinch = false;
     private Coroutine clinchRoutine;
-    public bool isHurt = false;
     private float critChance = 0.02f;
     private Coroutine moveRoutine;
+
+    private bool canMove;
+    private bool canPunch;
 
 
     void Start()
@@ -91,24 +89,30 @@ public class CharacterMotor : MonoBehaviour
         EventManager.Block += EventManagerBlock;
         EventManager.TakeHit += EventManagerTakeHit;
         EventManager.RoundStart += EventManagerRoundStart;
+        EventManager.TimerEnd += EventManagerTimerEnd;
         EventManager.RoundEnd += EventManagerRoundEnd;
         EventManager.KnockDown += EventManagerKnockDown;
         EventManager.Recover += EventManagerRecover;
-        EventManager.Clinch += EventManagerClinch;
+        EventManager.Move += EventManagerMove;
+        EventManager.Jab += EventManagerJab;
+        /*EventManager.Clinch += EventManagerClinch;
         EventManager.Break += EventManagerBreak;
-        EventManager.ClinchPunch += EventManagerClinchPunch;
+        EventManager.ClinchPunch += EventManagerClinchPunch;*/
     }
     private void OnDisable()
     {
         EventManager.Block -= EventManagerBlock;
         EventManager.TakeHit -= EventManagerTakeHit;
         EventManager.RoundStart -= EventManagerRoundStart;
+        EventManager.TimerEnd -= EventManagerTimerEnd;
         EventManager.RoundEnd -= EventManagerRoundEnd;
         EventManager.KnockDown -= EventManagerKnockDown;
         EventManager.Recover -= EventManagerRecover;
-        EventManager.Clinch += EventManagerClinch;
+        EventManager.Move -= EventManagerMove;
+        EventManager.Jab -= EventManagerJab;
+        /*EventManager.Clinch -= EventManagerClinch;
         EventManager.Break -= EventManagerBreak;
-        EventManager.ClinchPunch -= EventManagerClinchPunch;
+        EventManager.ClinchPunch -= EventManagerClinchPunch;*/
     }
 
     private void EventManagerBlock(int checkID)
@@ -123,7 +127,6 @@ public class CharacterMotor : MonoBehaviour
     private IEnumerator Block()
     {
         yield return new WaitForSeconds(0.1f);
-        isPunchOut = false;
         PlayerManager.isPunchOut[id] = false;
     }
 
@@ -134,6 +137,8 @@ public class CharacterMotor : MonoBehaviour
 
     private void EventManagerRoundStart()
     {
+        canMove = true;
+        canPunch = true;
         PlayerManager.isDown[id] = false;
         PlayerManager.isPunching[id] = false;
         if (RoundData.counter == 1)
@@ -144,12 +149,17 @@ public class CharacterMotor : MonoBehaviour
         {
             StartCoroutine(HealthRegen(10));
         }
-        roundOver = false;
     }
+
+    private void EventManagerTimerEnd()
+    {
+        canPunch = false;
+    }
+
     private void EventManagerRoundEnd()
     {
         PlayerManager.health[id] = health;
-        roundOver = true;
+        canPunch = false;
         if (clinchRoutine != null)
         {
             StopCoroutine(clinchRoutine);
@@ -160,11 +170,17 @@ public class CharacterMotor : MonoBehaviour
     private void EventManagerKnockDown(int checkId, bool _)
     {
         StopCoroutine(moveRoutine);
+        canPunch = false;
         if (checkId != id)
         {
             StartCoroutine(MoveBack());
         }
+        else
+        {
+            canMove = false;
+        }
     }
+
 
     private IEnumerator MoveBack()
     {
@@ -175,18 +191,32 @@ public class CharacterMotor : MonoBehaviour
             movingTimer += Time.deltaTime;
             yield return null;
         }
+        canMove = false;
     }
 
     private void EventManagerRecover(int checkId)
     {
         PlayerManager.health[id] = health;
+        canPunch = true;
+        canMove = true;
         if (checkId == id)
         {
             StartCoroutine(HealthRegen(40 / PlayerManager.knockDownCounter[id]));
         }
     }
 
-    private void EventManagerClinch(int _)
+
+    private void EventManagerMove()
+    {
+        canMove = true;
+    }
+
+    private void EventManagerJab()
+    {
+        canPunch = true;
+    }
+
+    /*private void EventManagerClinch(int _)
     {
         EndSlip();
         StopCoroutine(moveRoutine);
@@ -216,7 +246,7 @@ public class CharacterMotor : MonoBehaviour
         yield return new WaitForSeconds(0.2f);
         Vector3 direction = PlayerManager.position[id == 0 ? 1 : 0] - transform.position;
         EventManager.OnTakeHit(id, PunchData.damage["6"], direction, false);
-    }
+    }*/
 
     private IEnumerator HealthRegen(int healthAdd)
     {
@@ -236,15 +266,15 @@ public class CharacterMotor : MonoBehaviour
 
     public bool StartMove(string movedirection, bool isRunning = false)
     {
-        if (!isMoving && !isDown && !roundOver)
+        if (canMove)
         {
-            if (!isMoving && stamina > 10 && isRunning)
+            if (canMove && stamina > 10 && isRunning)
             {
                 moveRoutine = StartCoroutine(Move(movedirection, true));
                 stamina -= 10;
                 return true;
             }
-            else if (!isMoving)
+            else if (canMove)
             {
                 moveRoutine = StartCoroutine(Move(movedirection, false));
                 return true;
@@ -255,7 +285,7 @@ public class CharacterMotor : MonoBehaviour
 
     private IEnumerator Move(string direction, bool isRunning)
     {
-        isMoving = true;
+        canMove = false;
         Vector3 forward = transform.TransformDirection(Vector3.forward);
         Vector3 right = transform.TransformDirection(Vector3.right);
 
@@ -291,12 +321,12 @@ public class CharacterMotor : MonoBehaviour
             yield return null;
         }
         yield return new WaitForSeconds(moveDelay);
-        isMoving = false;
+        canMove = true;
     }
 
     public bool StartPunch(string punchtype, Vector3 target)
     {
-        if (!isPunching && !animator.isSlipL && !animator.isSlipR && stamina > PunchData.stamina[punchtype] && !isHit)
+        if (canPunch && !animator.isSlipL && !animator.isSlipR && stamina > PunchData.stamina[punchtype])
         {
             punchType = punchtype;
             PlayerManager.punchType[id] = punchtype;
@@ -308,21 +338,19 @@ public class CharacterMotor : MonoBehaviour
 
     private IEnumerator Punch(string punchtype, Vector3 target)
     {
-        isPunching = true;
+        canPunch = false;
         PlayerManager.isPunching[id] = true;
         stamina -= PunchData.stamina[punchtype];
         animator.Punch(punchtype, PunchData.duration[punchtype], target);
 
         yield return new WaitForSeconds(PunchData.timeSplit[punchType][0]);
-        isPunchOut = true;
         PlayerManager.isPunchOut[id] = true;
 
         yield return new WaitForSeconds(PunchData.timeSplit[punchType][1]);
-        isPunchOut = false;
         PlayerManager.isPunchOut[id] = false;
 
         yield return new WaitForSeconds(PunchData.timeSplit[punchtype][2] + punchDelay);
-        isPunching = false;
+        canPunch = true;
         PlayerManager.isPunching[id] = false;
     }
 
@@ -330,7 +358,7 @@ public class CharacterMotor : MonoBehaviour
     public IEnumerator TakeHit(int damage, Vector3 direction, bool isHead = false)
     {
         health -= damage;
-        isHit = true;
+        canPunch = false;
         if (Random.value < critChance)
         {
             isHurt = true;
@@ -348,7 +376,7 @@ public class CharacterMotor : MonoBehaviour
             yield return new WaitForSeconds(hitDelay * 3 / 4);
         }
         hitTimer = 0;
-        isHit = false;
+        canPunch = true;
     }
 
     private IEnumerator Hurt()
@@ -368,7 +396,7 @@ public class CharacterMotor : MonoBehaviour
 
     public void StartSlip(char side)
     {
-        if (!isPunching)
+        if (canPunch)
         {
             if (side == 'L')
             {
@@ -388,7 +416,8 @@ public class CharacterMotor : MonoBehaviour
         animator.isSlipL = animator.isSlipR = false;
     }
 
-    public void AttemptClinch()
+
+    /*public void AttemptClinch()
     {
         if (!roundOver)
         {
@@ -431,9 +460,9 @@ public class CharacterMotor : MonoBehaviour
             clinchRoutine = null;
         }
 
-    }
+    }*/
 
-    private IEnumerator Break()
+    /*private IEnumerator Break()
     {
         float temp = 0f;
         while (temp < 0.5f)
@@ -443,6 +472,6 @@ public class CharacterMotor : MonoBehaviour
             yield return null;
         }
 
-    }
+    }*/
 
 }

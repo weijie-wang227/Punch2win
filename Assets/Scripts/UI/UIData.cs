@@ -1,11 +1,10 @@
 using System.Collections;
 using UnityEngine;
-using TMPro;
 using UnityEngine.UI;
 
 public class UIData : MonoBehaviour
 {
-    private static UIData _Instance;
+	private static UIData _Instance;
 	public static UIData Instance
 	{
 		get
@@ -21,7 +20,7 @@ public class UIData : MonoBehaviour
 			return _Instance;
 		}
 	}
-    [SerializeField] private CharacterMotor opponent;
+	[SerializeField] private CharacterMotor opponent;
 	[SerializeField] private CharacterMotor player;
 	[SerializeField] private Slider oppHealthBar;
 	[SerializeField] private Slider oppStaminaBar;
@@ -30,7 +29,8 @@ public class UIData : MonoBehaviour
 	[SerializeField] private Image blackScreen;
 
 	// Use this for initialization
-	void Awake () {
+	void Awake()
+	{
 		oppHealthBar.maxValue = PlayerManager.maxHealth[1];
 		oppStaminaBar.maxValue = opponent.stamina;
 		playerHealthBar.maxValue = PlayerManager.maxHealth[0];
@@ -39,37 +39,47 @@ public class UIData : MonoBehaviour
 	}
 
 	// Update is called once per frame
-	void Update () {
-		if (opponent != null) {
+	void Update()
+	{
+		if (opponent != null)
+		{
 			oppHealthBar.value = opponent.health;
 			oppStaminaBar.value = opponent.stamina;
 		}
-		if (player != null) {
+		if (player != null)
+		{
 			playerHealthBar.value = player.health;
 			playerStaminaBar.value = player.stamina;
 		}
 	}
 
-	void OnEnable () {
+	void OnEnable()
+	{
 		EventManager.RoundEnd += EventManagerRoundEnd;
 	}
-	void OnDisable () {
+	void OnDisable()
+	{
 		EventManager.RoundEnd -= EventManagerRoundEnd;
 	}
 
-	private void EventManagerRoundEnd () {
+	private void EventManagerRoundEnd()
+	{
 		StartCoroutine(FadeToBlack(1.0f));
 	}
 
-	private IEnumerator FadeToBlack(float duration) {
+	private IEnumerator FadeToBlack(float duration)
+	{
 		yield return new WaitForSeconds(1.0f);
 		float timer = 0f;
 		Color newColor = blackScreen.color;
-		while (timer<duration){
-			newColor.a = Mathf.SmoothStep(0, 1, timer/duration);
+		while (timer < duration)
+		{
+			newColor.a = Mathf.SmoothStep(0, 1, timer / duration);
 			blackScreen.color = newColor;
 			timer += Time.deltaTime;
 			yield return null;
 		}
 	}
+
+
 }

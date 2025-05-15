@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using UnityEngine;
 using TMPro;
+using UnityEngine.Rendering;
 
 public class RoundTimer : MonoBehaviour
 {
@@ -10,64 +11,90 @@ public class RoundTimer : MonoBehaviour
     [SerializeField] private float restDuration = 20.0f;
     private float countDown;
     private bool isRunning;
-    private bool isRound;
-    
-    
+    private Action action;
+
+
     // Start is called before the first frame update
     void Start()
     {
         _timerText = GetComponent<TMP_Text>();
     }
 
-    private void OnEnable() {
-        EventManager.RoundStart += EventManagerOnRoundStart;
-        EventManager.RoundEnd += EventManagerOnRoundEnd;
-        EventManager.RestStart += EventManagerOnRestStart;
-        EventManager.RestEnd += EventManagerOnRestEnd;
+    private void OnEnable()
+    {
+        EventManager.RoundStart += EventManagerRoundStart;
+        EventManager.RoundEnd += EventManagerRoundEnd;
+        EventManager.TimerEnd += EventManagerTimerEnd;
+        EventManager.RestStart += EventManagerRestStart;
+        EventManager.RestEnd += EventManagerRestEnd;
+        EventManager.Defense += EventManagerDefense;
     }
 
-    private void OnDisable() {
-        EventManager.RoundStart -= EventManagerOnRoundStart;
-        EventManager.RoundEnd -= EventManagerOnRoundEnd;
-        EventManager.RestStart -= EventManagerOnRestStart;
-        EventManager.RestEnd -= EventManagerOnRestEnd;
+    private void OnDisable()
+    {
+        EventManager.RoundStart -= EventManagerRoundStart;
+        EventManager.RoundEnd -= EventManagerRoundEnd;
+        EventManager.TimerEnd -= EventManagerTimerEnd;
+        EventManager.RestStart -= EventManagerRestStart;
+        EventManager.RestEnd -= EventManagerRestEnd;
+        EventManager.Defense -= EventManagerDefense;
     }
+
+
 
     // Update is called once per frame
-    private void EventManagerOnRoundStart() {
+    private void EventManagerRoundStart()
+    {
         countDown = roundDuration;
-        isRound = true;
+        action = EventManager.OnTimerEnd;
         StartCoroutine(RoundStart());
     }
 
-    private IEnumerator RoundStart() {
+    private IEnumerator RoundStart()
+    {
         yield return new WaitForSeconds(2.0f);
         isRunning = true;
     }
 
-    private void EventManagerOnRoundEnd() => isRunning = false;
-    private void EventManagerOnRestStart() {
+    private void EventManagerRoundEnd() => isRunning = false;
+    private void EventManagerTimerEnd() => isRunning = false;
+    private void EventManagerRestStart()
+    {
         countDown = restDuration;
         isRunning = true;
-        isRound = false;
+        action = EventManager.OnRestEnd;
     }
 
-    private void EventManagerOnRestEnd(){
+    private void EventManagerRestEnd()
+    {
         isRunning = false;
     }
 
-    void Update () {
+
+    private void EventManagerDefense()
+    {
+        Invoke("Defense", 7f);
+    }
+
+    private void Defense()
+    {
+        countDown = 20f;
+        isRunning = true;
+        action = () => { };
+    }
+
+    void Update()
+    {
         TimeSpan timeSpan = TimeSpan.FromSeconds(countDown);
-        _timerText.text = timeSpan.ToString(format:@"mm\:ss\:ff");
+        _timerText.text = timeSpan.ToString(format: @"mm\:ss\:ff");
         if (!isRunning) return;
-        if (countDown < 0f) {
-            if (isRound){
-                EventManager.OnTimerEnd();
-                isRunning = false;
-            }
-            else {EventManager.OnRestEnd();}
-        };
+        if (countDown < 0f)
+        {
+            isRunning = false;
+            action();
+        }
+        ;
         countDown -= Time.deltaTime;
-        
+
     }
 }

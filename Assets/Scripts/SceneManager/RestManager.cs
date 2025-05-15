@@ -12,27 +12,33 @@ public class RestManager : MonoBehaviour
         isEnd = false;
     }
 
-    void Update () {
-        if (Input.GetKeyDown(KeyCode.Return) && !isEnd){
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Return) && !isEnd)
+        {
             isEnd = true;
             EventManager.OnRestEnd();
         }
     }
-    private void OnEnable(){
+    private void OnEnable()
+    {
         EventManager.RestEnd += EventManagerOnRestEnd;
     }
-    private void OnDisable(){
+    private void OnDisable()
+    {
         EventManager.RestEnd -= EventManagerOnRestEnd;
     }
-    private void EventManagerOnRestEnd () {
-        RoundData.counter ++;
+    public void EventManagerOnRestEnd()
+    {
+        RoundData.counter++;
         StartCoroutine(RestEnd());
     }
 
-    private IEnumerator RestEnd () {
+    private IEnumerator RestEnd()
+    {
         yield return new WaitForSeconds(1.0f);
         SceneManager.LoadScene("RoundScene");
     }
 
-    
+
 }

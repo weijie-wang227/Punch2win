@@ -1,46 +1,47 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class Tutorialmanager : MonoBehaviour
 {
     // Start is called before the first frame update
+    [SerializeField] private EnemyAI enemy;
     void Start()
     {
-
+        EventManager.OnBasics();
     }
 
-    // Update is called once per frame
-    void Update()
+    void OnEnable()
     {
-
+        EventManager.Defense += EventManagerDefense;
+        EventManager.TutorialEnd += EventManagerTutorialEnd;
     }
 
-    void onEnable()
+    void Oisable()
     {
-        EventManager.EventManagerBasics += EventManagerBasics;
-        EventManager.EventManagerMove += EventManagerMove;
-        EventManager.EventManagerJab += EventManagerJab;
-        EventManager.EventManagerSwing += EventManagerSwing;
-        EventManager.EventManagerRecover += EventManagerRecover;
+        EventManager.Defense -= EventManagerDefense;
+        EventManager.TutorialEnd -= EventManagerTutorialEnd;
     }
 
-    void OnDisable()
+    private void EventManagerDefense()
     {
-        EventManager.EventManagerBasics += EventManagerBasics;
-        EventManager.EventManagerMove += EventManagerMove;
-        EventManager.EventManagerJab += EventManagerJab;
-        EventManager.EventManagerSwing += EventManagerSwing;
-        EventManager.EventManagerRecover += EventManagerRecover;
+        StartCoroutine(Defense());
     }
 
-    private void EventManagerBasics() { }
+    private void EventManagerTutorialEnd()
+    {
+        enemy.enabled = false;
+    }
 
-    private void EventManagerMove() { }
+    private IEnumerator Defense()
+    {
+        yield return new WaitForSeconds(7.0f);
+        enemy.enabled = true;
+    }
 
-    private void EventManagerJab() { }
-
-    private void EventManagerSwing() { }
-
-    private void EventManagerRecover() { }
+    public void Return()
+    {
+        SceneManager.LoadScene("StartScene");
+    }
 }

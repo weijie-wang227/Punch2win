@@ -97,7 +97,7 @@ public class EnemyAI : MonoBehaviour
                 }
         }
 
-        if (playerMotor.isPunchOut && dodgeRoutine == null && distance < 90 && punchRoutine == null)
+        if (PlayerManager.isPunchOut[0] && dodgeRoutine == null && distance < 90 && punchRoutine == null)
         {
             dodgeRoutine = StartCoroutine(Dodge());
         }
@@ -178,7 +178,7 @@ public class EnemyAI : MonoBehaviour
 
     void OnControllerColliderHit(ControllerColliderHit hit)
     {
-        if (hit.collider.tag == "Wall" && uncornerRoutine == null)
+        if (hit.collider.tag == "Wall" && uncornerRoutine == null && this.enabled)
         {
             uncornerRoutine = StartCoroutine(Uncorner(hit.normal));
         }
